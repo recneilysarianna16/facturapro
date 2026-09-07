@@ -158,6 +158,11 @@
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
       </svg>
     );
+    const IconBox = ({ className = "w-4 h-4" }) => (
+      <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+      </svg>
+    );
 
     function App() {
       const [isPreview, setIsPreview] = useState(false);
@@ -183,15 +188,20 @@
       const [savedInvoices, setSavedInvoices] = useState([]);
       const [showHistoryModal, setShowHistoryModal] = useState(false);
 
-      // Cargar historial guardado al iniciar
+      // Estado para el Catálogo de Productos
+      const [catalog, setCatalog] = useState([]);
+      const [newCatName, setNewCatName] = useState('');
+      const [newCatPrice, setNewCatPrice] = useState('');
+      const [newCatDesc, setNewCatDesc] = useState('');
+
+      // Cargar historial y catálogo guardado al iniciar
       useEffect(() => {
-        const stored = localStorage.getItem('ari_fashion_invoices');
-        if (stored) {
+        const storedInvoices = localStorage.getItem('ari_fashion_invoices');
+        if (storedInvoices) {
           try {
-            const parsed = JSON.parse(stored);
+            const parsed = JSON.parse(storedInvoices);
             setSavedInvoices(parsed);
             if (parsed.length > 0) {
-              // Sugerir siguiente número de factura
               const lastNum = parseInt(parsed[0].invoiceNumber, 10);
               if (!isNaN(lastNum)) {
                 setInvoiceNumber(String(lastNum + 1).padStart(4, '0'));
@@ -199,7 +209,46 @@
             }
           } catch(e) { console.error(e); }
         }
+
+        const storedCatalog = localStorage.getItem('ari_fashion_catalog');
+        if (storedCatalog) {
+          try {
+            setCatalog(JSON.parse(storedCatalog));
+          } catch(e) { console.error(e); }
+        }
       }, []);
+
+      // Funciones del Catálogo
+      const handleAddCatalogItem = () => {
+        if (!newCatName.trim() || !newCatPrice) {
+          alert('Por favor, ingresa al menos un nombre y un precio válido.');
+          return;
+        }
+        const updatedCatalog = [
+          ...catalog,
+          { id: Date.now(), title: newCatName.trim(), price: parseFloat(newCatPrice), description: newCatDesc.trim() }
+        ];
+        setCatalog(updatedCatalog);
+        localStorage.setItem('ari_fashion_catalog', JSON.stringify(updatedCatalog));
+        setNewCatName('');
+        setNewCatPrice('');
+        setNewCatDesc('');
+      };
+
+      const handleRemoveCatalogItem = (id) => {
+        const updatedCatalog = catalog.filter(item => item.id !== id);
+        setCatalog(updatedCatalog);
+        localStorage.setItem('ari_fashion_catalog', JSON.stringify(updatedCatalog));
+      };
+
+      const handleAddProductFromCatalog = (catItem) => {
+        // Si el primer item está totalmente vacío, lo reemplaza
+        if (items.length === 1 && !items[0].title && (!items[0].price || items[0].price == 0)) {
+          setItems([{ id: Date.now(), title: catItem.title, description: catItem.description || '', quantity: 1, price: catItem.price }]);
+        } else {
+          setItems([...items, { id: Date.now(), title: catItem.title, description: catItem.description || '', quantity: 1, price: catItem.price }]);
+        }
+      };
 
       const saveCurrentInvoiceToHistory = () => {
         const currentInvoice = {
@@ -706,12 +755,99 @@
                     </div>
                   </div>
 
+                  {/* CATÁLOGO DE PRODUCTOS GUARDADOS */}
+                  <div className={`p-5 rounded-xl border shadow-sm space-y-4 transition-colors duration-300 ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200/80'}`}>
+                    <h2 className="text-sm font-bold uppercase tracking-wider flex items-center space-x-2 text-pink-500">
+                      <IconBox />
+                      <span className={isDarkMode ? 'text-white' : 'text-slate-900'}>Catálogo de Productos Guardados</span>
+                    </h2>
+                    
+                    {/* Formulario rápido para guardar en catálogo */}
+                    <div className={`p-3 rounded-lg border space-y-2 ${isDarkMode ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
+                      <p className={`text-[11px] font-semibold ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>Guardar Nuevo Producto Frecuente:</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
+                        <input
+                          type="text"
+                          placeholder="Nombre (Ej: Franela Asimétrica)"
+                          value={newCatName}
+                          onChange={(e) => setNewCatName(e.target.value)}
+                          className={`sm:col-span-7 text-xs px-2.5 py-1.5 rounded outline-none border focus:ring-1 focus:ring-pink-500 ${
+                            isDarkMode ? 'bg-slate-900 text-white border-slate-700' : 'bg-white text-slate-800 border-slate-200'
+                          }`}
+                        />
+                        <div className="sm:col-span-5 relative">
+                          <span className={`absolute left-2 top-1.5 text-xs ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>$</span>
+                          <input
+                            type="number"
+                            step="0.01"
+                            placeholder="Precio ($)"
+                            value={newCatPrice}
+                            onChange={(e) => setNewCatPrice(e.target.value)}
+                            className={`w-full text-xs pl-5 pr-2 py-1.5 rounded outline-none border focus:ring-1 focus:ring-pink-500 font-semibold ${
+                              isDarkMode ? 'bg-slate-900 text-white border-slate-700' : 'bg-white text-slate-800 border-slate-200'
+                            }`}
+                          />
+                        </div>
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="Descripción por defecto (opcional)"
+                        value={newCatDesc}
+                        onChange={(e) => setNewCatDesc(e.target.value)}
+                        className={`w-full text-[11px] px-2.5 py-1.5 rounded outline-none border focus:ring-1 focus:ring-pink-500 ${
+                          isDarkMode ? 'bg-slate-900 text-white border-slate-700' : 'bg-white text-slate-800 border-slate-200'
+                        }`}
+                      />
+                      <button
+                        onClick={handleAddCatalogItem}
+                        className="w-full py-1.5 bg-pink-600 hover:bg-pink-700 text-white text-xs font-bold rounded-lg transition flex items-center justify-center space-x-1"
+                      >
+                        <IconPlus />
+                        <span>Guardar Producto en Catálogo</span>
+                      </button>
+                    </div>
+
+                    {/* Lista de productos del catálogo */}
+                    {catalog.length > 0 ? (
+                      <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                        <p className={`text-[11px] font-semibold ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Haz clic en "➕ Cargar" para agregarlo a la factura:</p>
+                        {catalog.map((catItem) => (
+                          <div key={catItem.id} className={`p-2.5 rounded-lg border flex items-center justify-between transition ${isDarkMode ? 'bg-slate-950 border-slate-800 hover:border-pink-500/50' : 'bg-slate-50 border-slate-200 hover:border-pink-300'}`}>
+                            <div className="overflow-hidden mr-2">
+                              <p className={`text-xs font-bold truncate ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>{catItem.title}</p>
+                              <p className="text-[10px] text-pink-500 font-semibold">${catItem.price.toFixed(2)} {catItem.description && <span className="text-slate-400 font-normal"> - {catItem.description}</span>}</p>
+                            </div>
+                            <div className="flex items-center space-x-1 shrink-0">
+                              <button
+                                onClick={() => handleAddProductFromCatalog(catItem)}
+                                className="px-2 py-1 bg-pink-600 hover:bg-pink-700 text-white text-[11px] font-bold rounded transition flex items-center space-x-1"
+                                title="Agregar a la factura"
+                              >
+                                <IconPlus className="w-3 h-3" />
+                                <span>Cargar</span>
+                              </button>
+                              <button
+                                onClick={() => handleRemoveCatalogItem(catItem.id)}
+                                className={`p-1 transition ${isDarkMode ? 'text-slate-500 hover:text-rose-400' : 'text-slate-400 hover:text-rose-500'}`}
+                                title="Eliminar del catálogo"
+                              >
+                                <IconTrash className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-[11px] text-slate-400 text-center py-2">No tienes productos guardados en tu catálogo aún.</p>
+                    )}
+                  </div>
+
                   {/* Ítems y Productos */}
                   <div className={`p-5 rounded-xl border shadow-sm space-y-4 transition-colors duration-300 ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200/80'}`}>
                     <div className="flex items-center justify-between">
                       <h2 className="text-sm font-bold uppercase tracking-wider flex items-center space-x-2 text-pink-500">
                         <IconFileText />
-                        <span className={isDarkMode ? 'text-white' : 'text-slate-900'}>Productos / Servicios</span>
+                        <span className={isDarkMode ? 'text-white' : 'text-slate-900'}>Productos / Servicios en Factura</span>
                       </h2>
                       <button
                         onClick={handleAddItem}
@@ -843,7 +979,6 @@
                       ></textarea>
                     </div>
                   </div>
-
                 </div>
 
                 {/* VISTA PREVIA EN VIVO DERECHA */}
@@ -887,7 +1022,6 @@
                     />
                   </div>
                 </div>
-
               </div>
             )}
           </main>
@@ -937,7 +1071,6 @@
               </div>
             </div>
           )}
-
         </div>
       );
     }
@@ -1152,7 +1285,6 @@
               </div>
             </div>
           </div>
-
           <div className={`mt-8 sm:mt-12 pt-4 sm:pt-6 border-t text-center space-y-1 ${isDarkMode ? 'border-slate-800' : 'border-slate-100'}`}>
             <p className={`text-[10px] sm:text-[11px] font-bold tracking-wider ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
               ¡Gracias por tu compra en Ari Fashion!
@@ -1168,82 +1300,5 @@
     const root = ReactDOM.createRoot(document.getElementById('root'));
     root.render(<App />);
   </script>
-   <!-- MÓDULO DE CATÁLOGO GUARDADO -->
-<div id="seccion-catalogo" style="margin: 20px 0; padding: 15px; border: 1px solid #333; border-radius: 8px;">
-  <h3 style="color: #4f46e5;">📦 Catálogo de Productos Guardados</h3>
-  
-  <!-- Formulario para agregar nuevo producto al catálogo -->
-  <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
-    <input type="text" id="cat-nombre" placeholder="Nombre del producto (ej: Franela)" style="flex: 1; padding: 8px;">
-    <input type="number" id="cat-precio" placeholder="Precio ($ USD)" style="width: 120px; padding: 8px;">
-    <button onclick="guardarEnCatalogo()" style="background: #4f46e5; color: white; padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer;">
-      ➕ Guardar Producto
-    </button>
-  </div>
-
-  <!-- Lista desplegable para seleccionar y cargar el producto a la factura -->
-  <div style="display: flex; gap: 10px; align-items: center;">
-    <label>Cargar a la factura:</label>
-    <select id="select-catalogo" style="flex: 1; padding: 8px;" onchange="cargarAFormulario()">
-      <option value="">-- Selecciona un producto guardado --</option>
-    </select>
-  </div>
-</div>
-
-<script>
-// Array para almacenar productos
-let catalogoProductos = JSON.parse(localStorage.getItem('mi_catalogo_app')) || [];
-
-// Función para actualizar el selector desplegable
-function actualizarSelectCatalogo() {
-  const select = document.getElementById('select-catalogo');
-  select.innerHTML = '<option value="">-- Selecciona un producto guardado --</option>';
-  
-  catalogoProductos.forEach((prod, index) => {
-    const option = document.createElement('option');
-    option.value = index;
-    option.textContent = `${prod.nombre} - $${prod.precio}`;
-    select.appendChild(option);
-  });
-}
-
-// Función para guardar un nuevo producto en el catálogo
-function guardarEnCatalogo() {
-  const nombre = document.getElementById('cat-nombre').value.trim();
-  const precio = parseFloat(document.getElementById('cat-precio').value);
-
-  if (!nombre || isNaN(precio)) {
-    alert('Por favor ingresa un nombre y un precio válido.');
-    return;
-  }
-
-  catalogoProductos.push({ nombre, precio });
-  localStorage.setItem('mi_catalogo_app', JSON.stringify(catalogoProductos));
-  
-  document.getElementById('cat-nombre').value = '';
-  document.getElementById('cat-precio').value = '';
-  
-  actualizarSelectCatalogo();
-  alert('¡Producto guardado en el catálogo con éxito!');
-}
-
-// Función para transferir el producto seleccionado al formulario de venta principal
-function cargarAFormulario() {
-  const index = document.getElementById('select-catalogo').value;
-  if (index === '') return;
-
-  const producto = catalogoProductos[index];
-
-  // NOTA: Reemplaza estos IDs por los IDs exactos que usas en tu formulario de productos
-  const inputNombre = document.querySelector('input[placeholder*="Producto"]') || document.querySelector('input[type="text"]');
-  const inputPrecio = document.querySelector('input[placeholder*="Precio"]') || document.querySelector('input[type="number"]');
-
-  if (inputNombre) inputNombre.value = producto.nombre;
-  if (inputPrecio) inputPrecio.value = producto.precio;
-}
-
-// Cargar catálogo existente al abrir la página
-document.addEventListener('DOMContentLoaded', actualizarSelectCatalogo);
-</script>
 </body>
 </html>
