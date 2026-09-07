@@ -1168,5 +1168,82 @@
     const root = ReactDOM.createRoot(document.getElementById('root'));
     root.render(<App />);
   </script>
+   <!-- MÓDULO DE CATÁLOGO GUARDADO -->
+<div id="seccion-catalogo" style="margin: 20px 0; padding: 15px; border: 1px solid #333; border-radius: 8px;">
+  <h3 style="color: #4f46e5;">📦 Catálogo de Productos Guardados</h3>
+  
+  <!-- Formulario para agregar nuevo producto al catálogo -->
+  <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
+    <input type="text" id="cat-nombre" placeholder="Nombre del producto (ej: Franela)" style="flex: 1; padding: 8px;">
+    <input type="number" id="cat-precio" placeholder="Precio ($ USD)" style="width: 120px; padding: 8px;">
+    <button onclick="guardarEnCatalogo()" style="background: #4f46e5; color: white; padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer;">
+      ➕ Guardar Producto
+    </button>
+  </div>
+
+  <!-- Lista desplegable para seleccionar y cargar el producto a la factura -->
+  <div style="display: flex; gap: 10px; align-items: center;">
+    <label>Cargar a la factura:</label>
+    <select id="select-catalogo" style="flex: 1; padding: 8px;" onchange="cargarAFormulario()">
+      <option value="">-- Selecciona un producto guardado --</option>
+    </select>
+  </div>
+</div>
+
+<script>
+// Array para almacenar productos
+let catalogoProductos = JSON.parse(localStorage.getItem('mi_catalogo_app')) || [];
+
+// Función para actualizar el selector desplegable
+function actualizarSelectCatalogo() {
+  const select = document.getElementById('select-catalogo');
+  select.innerHTML = '<option value="">-- Selecciona un producto guardado --</option>';
+  
+  catalogoProductos.forEach((prod, index) => {
+    const option = document.createElement('option');
+    option.value = index;
+    option.textContent = `${prod.nombre} - $${prod.precio}`;
+    select.appendChild(option);
+  });
+}
+
+// Función para guardar un nuevo producto en el catálogo
+function guardarEnCatalogo() {
+  const nombre = document.getElementById('cat-nombre').value.trim();
+  const precio = parseFloat(document.getElementById('cat-precio').value);
+
+  if (!nombre || isNaN(precio)) {
+    alert('Por favor ingresa un nombre y un precio válido.');
+    return;
+  }
+
+  catalogoProductos.push({ nombre, precio });
+  localStorage.setItem('mi_catalogo_app', JSON.stringify(catalogoProductos));
+  
+  document.getElementById('cat-nombre').value = '';
+  document.getElementById('cat-precio').value = '';
+  
+  actualizarSelectCatalogo();
+  alert('¡Producto guardado en el catálogo con éxito!');
+}
+
+// Función para transferir el producto seleccionado al formulario de venta principal
+function cargarAFormulario() {
+  const index = document.getElementById('select-catalogo').value;
+  if (index === '') return;
+
+  const producto = catalogoProductos[index];
+
+  // NOTA: Reemplaza estos IDs por los IDs exactos que usas en tu formulario de productos
+  const inputNombre = document.querySelector('input[placeholder*="Producto"]') || document.querySelector('input[type="text"]');
+  const inputPrecio = document.querySelector('input[placeholder*="Precio"]') || document.querySelector('input[type="number"]');
+
+  if (inputNombre) inputNombre.value = producto.nombre;
+  if (inputPrecio) inputPrecio.value = producto.precio;
+}
+
+// Cargar catálogo existente al abrir la página
+document.addEventListener('DOMContentLoaded', actualizarSelectCatalogo);
+</script>
 </body>
 </html>
